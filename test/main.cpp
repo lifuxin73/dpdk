@@ -359,7 +359,12 @@ main(int argc, char **argv)
 	/*RTE_LCORE_FOREACH_SLAVE(lcore_id) {
 			rte_eal_remote_launch(start, NULL, lcore_id);
 		}*/
+	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
+				rte_eal_remote_launch(start, NULL, lcore_id);
+			}
 
-	lcore_main();
+
+	sleep(3);
+
 	return 0;
 }
