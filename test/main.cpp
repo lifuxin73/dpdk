@@ -20,6 +20,7 @@
 #include <rte_mempool.h>
 
 #include <message/student.hpp>
+#include <event/EthMessage.hpp>
 #include <iostream>
 
 #define RX_RING_SIZE 128        //接收环大小
@@ -33,10 +34,17 @@
 //static const struct rte_eth_conf port_conf_default ;
 
 struct rte_mempool *mbuf_pool;
-
+struct rte_mempool *mbuf_pool1;
+struct rte_mempool *mbuf_pool2;
 static inline int
 port_init(uint8_t port, struct rte_mempool *mbuf_pool)
 {
+
+	if(port==0)
+	{
+
+		return 0;
+	}
 	rte_eth_conf port_conf_default1 ;
 	port_conf_default1.rxmode.mq_mode = ETH_MQ_RX_NONE;
 	port_conf_default1.rxmode.max_rx_pkt_len = ETHER_MAX_LEN;
@@ -83,8 +91,27 @@ port_init(uint8_t port, struct rte_mempool *mbuf_pool)
 
 	for(q = 0; q <rx_rings; q++)
 	{
+		struct rte_mempool *pool;
+		if(port == 0)
+		{
+			pool = mbuf_pool;
+		}
+		else if(port ==1)
+		{
+			pool = mbuf_pool1;
+		}
+		else if(port ==2)
+		{
+			pool = mbuf_pool2;
+		}
+		else
+		{
+			pool = mbuf_pool;
+		}
 		retval = rte_eth_rx_queue_setup(port, q, RX_RING_SIZE,
-				rte_eth_dev_socket_id(port), NULL ,mbuf_pool);
+				rte_eth_dev_socket_id(port), NULL ,pool);
+
+
 
 		if(retval < 0)
 		{
@@ -120,7 +147,7 @@ port_init(uint8_t port, struct rte_mempool *mbuf_pool)
                      addr.addr_bytes[2], addr.addr_bytes[3],
                      addr.addr_bytes[4], addr.addr_bytes[5]);
 
-	 rte_eth_promiscuous_enable(port);
+	 //rte_eth_promiscuous_enable(port);//网卡设置的是否混咋模式接收信息，如果是混杂模式，说明你任何网络信息都接收，否则只接收你上面设置的mac地址，为目的地址的网络信息
 
 	 std::cout<<"===============rte_eth_promiscuous_enable end : "<<std::endl;
 	 /* 查看端口状态 */
@@ -232,6 +259,34 @@ static void lcore_main()
 
 static int start1()
 {
+
+
+
+	Student std(32,"lfx");
+
+
+	EthEvent<Student> ethEvent(0, mbuf_pool);
+
+
+	ethEvent.initial();
+
+	uint16_t s=ethEvent.send(0x000c29d001e0,&std);
+
+	printf("send size: %d\n",s);
+
+	s=ethEvent.send(0x000c29d001e0,&std);
+	printf("send size: %d\n",s);
+
+	s=ethEvent.send(0x000c29d001ea,&std);
+
+	printf("send size: %d\n",s);
+
+	s=ethEvent.send(0x000c29d001ea,&std);
+	printf("send size: %d\n",s);
+
+	return 0;
+
+
 	struct rte_mbuf *pkt;
 	struct ether_hdr *eth_hdr;
 	int pkt_size;
@@ -240,7 +295,7 @@ static int start1()
 	std::cout<<"start1"<<std::endl;
 	std::cout<<"pid "<<pthread_self()<<std::endl;
 
-	for(int i = 0; i <10 ; i++)
+	for(int i = 0; i <2 ; i++)
 	{
 		pkt = rte_pktmbuf_alloc(mbuf_pool);
 		pkt_size = sizeof(struct message) + sizeof(struct ether_hdr);
@@ -248,15 +303,16 @@ static int start1()
 		pkt->pkt_len = pkt_size;
 		printf("send data_len : %d\n", pkt_size);
 		eth_hdr = rte_pktmbuf_mtod(pkt, struct ether_hdr *);
-		//rte_eth_macaddr_get(1, &eth_hdr->d_addr);
-		//rte_eth_macaddr_get(0, &eth_hdr->s_addr);
-		//eth_hdr->ether_type = htons(PTP_PROTOCOL);
+		rte_eth_macaddr_get(1, &eth_hdr->d_addr);
+		rte_eth_macaddr_get(0, &eth_hdr->s_addr);
+		eth_hdr->ether_type = htons(PTP_PROTOCOL);
 		void* data;
 
 		//data = rte_pktmbuf_append(pkt, sizeof(struct message));
-		data = rte_pktmbuf_mtod(pkt,struct message*);
 
-		Student st(18, "lifuxin");
+		data = rte_pktmbuf_mtod(pkt,struct message*);
+		data += sizeof(struct ether_hdr);
+		Student st(i, "lifuxin");
 		std::cout<<"send age : "<<st.age<<std::endl;
 		std::cout<<"send name : "<<st.name<<std::endl;
 
@@ -268,10 +324,7 @@ static int start1()
 
 		printf("send data_len 1 : %d\n", pkt->pkt_len );
 
-
-
-
-
+		std::cout<<"start1 send "<<" "<<data<<std::endl;
 		uint16_t nb_tx = rte_eth_tx_burst(0, 0, &pkt, 1);
 		printf("nb_tx : %d\n", nb_tx);
 
@@ -282,20 +335,35 @@ static int start1()
 
 static int start2()
 {
-	struct rte_mbuf *pkt1 = rte_pktmbuf_alloc(mbuf_pool);
+	sleep(1);
+	struct rte_mbuf *pkt1;// = rte_pktmbuf_alloc(mbuf_pool1);
 	std::cout<<"start2"<<std::endl;
-	for(int i = 0; i <10 ; i++)
+
+	EthEvent<Student> ethEvent(1, mbuf_pool);
+	for(int i = 0; i <2 ; i++)
 	{
 		Student *ad;
-		void* da;
-		uint16_t nb_rx = rte_eth_rx_burst(1, 0, &pkt1, 1);
-		printf("nb_rx : %d\n", nb_rx);
-		da = rte_pktmbuf_mtod(pkt1, struct message*);
-		//	 (char*) m->buf_addr + RTE_MIN(RTE_PKTMBUF_HEADROOM, m->buf_len);
-		ad = (Student *)da;
 
-		std::cout<<"receive age : "<<ad->age<<std::endl;
-		std::cout<<"receive name : "<<ad->name<<std::endl;
+		ethEvent.receive(&ad);
+		std::cout<<"start2 receive age : "<<ad->age<<" "<<ad<<std::endl;
+		std::cout<<"start2 receive name : "<<ad->name<<std::endl;
+	}
+
+	return 0;
+}
+
+static int start3()
+{
+	sleep(2);
+	struct rte_mbuf *pkt1;// = rte_pktmbuf_alloc(mbuf_pool1);
+	std::cout<<"start3"<<std::endl;
+	EthEvent<Student> ethEvent(2, mbuf_pool);
+	for(int i = 0; i <2 ; i++)
+	{
+		Student *ad;
+		ethEvent.receive(&ad);
+		std::cout<<"start3 receive age : "<<ad->age<<" "<<ad<<std::endl;
+		std::cout<<"start3 receive name : "<<ad->name<<std::endl;
 	}
 
 	return 0;
@@ -314,6 +382,9 @@ static int start(__attribute__((unused)) void *arg)
 		break;
 		case 2:
 			start2();
+		break;
+		case 3:
+			start3();
 		break;
 	}
 	return 0;
@@ -334,6 +405,10 @@ main(int argc, char **argv)
 
 	mbuf_pool = rte_pktmbuf_pool_create("MEM_POOL",NUM_MBUFS * rte_eth_dev_count(),
 		MBUF_CACHE_SIZE,0,RTE_MBUF_DEFAULT_BUF_SIZE,rte_socket_id());
+	mbuf_pool1 = rte_pktmbuf_pool_create("MEM_POOL1",NUM_MBUFS * rte_eth_dev_count(),
+			MBUF_CACHE_SIZE,0,RTE_MBUF_DEFAULT_BUF_SIZE,rte_socket_id());
+	mbuf_pool2 = rte_pktmbuf_pool_create("MEM_POOL2",NUM_MBUFS * rte_eth_dev_count(),
+				MBUF_CACHE_SIZE,0,RTE_MBUF_DEFAULT_BUF_SIZE,rte_socket_id());
 
 	if(mbuf_pool == NULL)
 	{
