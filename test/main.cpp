@@ -256,12 +256,54 @@ static void lcore_main()
 
 }
 
+static uint16_t  receive_callback(uint16_t port,
+		uint16_t queue,
+		struct rte_mbuf *pkts[],
+		uint16_t nb_pkts,
+		uint16_t max_pkts,
+		void *user_param)
+{
+	std::cout<<"receive_callback "<<nb_pkts<<std::endl;
+	rte_mbuf *pkt = pkts[0];
+	void* data;
+	Student* student;
+	data = rte_pktmbuf_mtod(pkt, struct ether_hdr*);
+	data = (data + sizeof(ether_hdr));
+	student = (Student*)data;
+
+	std::cout<<"start2 receive age : "<<student->age<<std::endl;
+	std::cout<<"start2 receive name : "<<student->name<<std::endl;
+
+	return nb_pkts;
+}
+
+static uint16_t  receive_callback1(uint16_t port,
+		uint16_t queue,
+		struct rte_mbuf *pkts[],
+		uint16_t nb_pkts,
+		uint16_t max_pkts,
+		void *user_param)
+{
+	std::cout<<"receive_callback 1 "<<nb_pkts<<std::endl;
+	rte_mbuf *pkt = pkts[0];
+	void* data;
+	Student* student;
+	data = rte_pktmbuf_mtod(pkt, struct ether_hdr*);
+	data = (data + sizeof(ether_hdr));
+	student = (Student*)data;
+
+	std::cout<<"start2 receive age : "<<student->age<<std::endl;
+	std::cout<<"start2 receive name : "<<student->name<<std::endl;
+
+	return nb_pkts;
+}
 
 static int start1()
 {
 
 
-
+	rte_eth_add_rx_callback(1, 0, receive_callback, NULL);
+	rte_eth_add_rx_callback(1, 0, receive_callback1, NULL);
 	Student std(32,"lfx");
 
 
@@ -270,17 +312,21 @@ static int start1()
 
 	ethEvent.initial();
 
+	std.age = 16;
 	uint16_t s=ethEvent.send(0x000c29d001e0,&std);
 
 	printf("send size: %d\n",s);
 
+	std.age = 17;
 	s=ethEvent.send(0x000c29d001e0,&std);
 	printf("send size: %d\n",s);
 
+	std.age = 18;
 	s=ethEvent.send(0x000c29d001ea,&std);
 
 	printf("send size: %d\n",s);
 
+	std.age = 19;
 	s=ethEvent.send(0x000c29d001ea,&std);
 	printf("send size: %d\n",s);
 
@@ -439,7 +485,7 @@ main(int argc, char **argv)
 			}
 
 
-	sleep(3);
 
+	rte_eal_mp_wait_lcore();
 	return 0;
 }

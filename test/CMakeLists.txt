@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 2.6)
 
-
+add_compile_options(-std=c++11)
 
 set(CMAKE_CXX_FLAGS "-msse4.2")
 #include_directories(/home/lifuxin/dpdk/dpdk/x86_64-native-linuxapp-gcc/include)

@@ -22,6 +22,7 @@ public:
 	EthEvent(int port,struct rte_mempool *mbuf_pool,int rx_rings, int tx_rings);
 	uint16_t send(uint64_t mac,message* d);
 	uint16_t receive(message** d);
+	uint16_t register_callback();
 	int initial();
 private:
 	struct rte_mbuf *pkt;

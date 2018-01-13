@@ -17,6 +17,7 @@
 #include <rte_memory.h>
 #include <rte_mempool.h>
 #include <event/Event.hpp>
+#include <assert.h>
 #include <iostream>
 
 #define RX_RING_SIZE 128        //接收环大小
@@ -34,13 +35,14 @@ struct rte_ring *ring2;
 
 void start1()
 {
+	sleep(1);
 	std::cout<<"start1 "<<std::endl;
 
-	struct rte_ring *send = rte_ring_lookup("message_ring1");
-	struct rte_ring *recv = rte_ring_lookup("message_ring2");
+	struct rte_ring *send = rte_ring_lookup("message_ring2");
+	//struct rte_ring *recv = rte_ring_lookup("message_ring2");
 
-	Event event(send, recv, mbuf_pool);
-
+	Event event("message_ring1", "MEM_POOL", false);
+	event.setTargetQueue(send);
 	char a[]={"1111111111111111111"};
 	event.send(a);
 }
@@ -49,15 +51,16 @@ void start2()
 {
 	std::cout<<"start2 "<<std::endl;
 
-	struct rte_ring *send = rte_ring_lookup("message_ring2");
-	struct rte_ring *recv = rte_ring_lookup("message_ring1");
+	//struct rte_ring *send = rte_ring_lookup("message_ring2");
+	//struct rte_ring *recv = rte_ring_lookup("message_ring1");
 
-	Event event(send, recv, mbuf_pool);
+	Event event("message_ring2", "MEM_POOL", false);
 
+	sleep(2);
 	char a[]={"1111111111111111111"};
 	void* data;
+	std::cout<<"start receive "<<std::endl;
 	data = event.recv();
-
 	std::cout<<"recv : "<<(char* )data<<std::endl;
 }
 
@@ -95,14 +98,20 @@ int main(int argc, char **argv)
 	mbuf_pool = rte_pktmbuf_pool_create("MEM_POOL",NUM_MBUFS * rte_eth_dev_count(),
 	MBUF_CACHE_SIZE,0,RTE_MBUF_DEFAULT_BUF_SIZE,rte_socket_id());
 
-	ring1 = rte_ring_create("message_ring1",
-	        ring_size, rte_socket_id(), flags);
+	rte_ring_create("message_ring1",
+	            64, rte_socket_id(), 0);
+	rte_ring_create("message_ring2",
+	            64, rte_socket_id(), 0);
+	//ring1 = rte_ring_create("message_ring1",
+	//        ring_size, rte_socket_id(), flags);
 
-	ring2 = rte_ring_create("message_ring2",
-		        ring_size, rte_socket_id(), flags);
+	//ring2 = rte_ring_create("message_ring2",
+	//	        ring_size, rte_socket_id(), flags);
 
 	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
 				rte_eal_remote_launch(start, NULL, lcore_id);
 			}
+	sleep(3);
+
 	return 0;
 };

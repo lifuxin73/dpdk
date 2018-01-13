@@ -1,0 +1,12 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 2.6)  
+add_compile_options(-std=c++11)
+
+set(CMAKE_CXX_FLAGS "-msse4.2")
+include_directories(/home/lifuxin/dpdk/dpdk/x86_64-native-linuxapp-gcc/include )
+include_directories(/home/lifuxin/dpdk/use_dpdk_code/dpdk/ )
+SET(LIBTEST test.cpp)
+SET(LIBTEST1 test1.cpp)
+SET(LIBTEST2 test2.cpp)
+ADD_LIBRARY(test SHARED ${LIBTEST})
+ADD_LIBRARY(test1 SHARED ${LIBTEST1})
+ADD_LIBRARY(test2 SHARED ${LIBTEST2})
