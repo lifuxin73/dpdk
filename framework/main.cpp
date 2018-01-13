@@ -22,6 +22,11 @@
 int main(int argc, char **argv)
 {
     int ret;
+
+    printf("PGID : %d\n",getpgrp());
+    printf("PID : %d\n",getpid());
+    //ProcessManage::init_daemon();
+
     ret = rte_eal_init(argc, argv);
 
     boost::shared_ptr<DllInfo> d(new DllInfo("../business/libtest.so"));
@@ -48,6 +53,8 @@ int main(int argc, char **argv)
 	 //{
 	//	 dll->fn1(1000);
 	 //}
+
+    //ProcessManage::init_daemon();
     ProcessManage processManage(4);
     processManage.CreateChilden(manageDLL);
     printf("childen process %d\n",processManage.getPrecesses().size());

@@ -8,12 +8,15 @@
 #ifndef DPDK_FRAMEWORK_PROCESSMANAGE_HPP_
 #define DPDK_FRAMEWORK_PROCESSMANAGE_HPP_
 #include<unistd.h>
-#include<sys/types.h>
+
 #include <signal.h>
 #include <assert.h>
 #include<stdio.h>
 #include<stdlib.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include<sys/types.h>
+#include<sys/param.h>
 #include <vector>
 #include<boost/smart_ptr.hpp>
 
@@ -42,12 +45,50 @@ public:
 	bool CreateChilden(ManageDLL* manageDLL);
 	std::vector<boost::shared_ptr<Process> >& getPrecesses();
 	void waitProcess();
+	static void init_daemon();
 private:
 	std::vector<boost::shared_ptr<Process> >::iterator findPos(pid_t pid);
 	bool SetAffinity(int core);
 	int coreCounter;
 	std::vector<boost::shared_ptr<Process> > precesses;
 };
+
+void ProcessManage::init_daemon()
+{
+    int pid;
+    int i;
+    pid=fork();
+    if( pid )
+    {
+        exit(0);
+    }
+    else if(pid< 0)
+    {
+        exit(1);
+    }
+
+    setsid();
+
+    pid = fork();
+    if(pid)
+    {
+        exit(0);
+    }
+    else if(pid< 0)
+    {
+        exit(1);
+    }
+
+    for(i=0;i< NOFILE;++i)
+    {
+        close(i);
+    }
+
+    chdir("/tmp");
+
+    umask(0);
+    return;
+}
 
 void ProcessManage::waitProcess()
 {
@@ -95,41 +136,43 @@ ProcessManage::ProcessManage(int coreCounter):coreCounter(coreCounter){}
 bool ProcessManage::CreateChilden(ManageDLL* manageDLL)
 {
 
-	for(int index = 1; index < coreCounter ;index++)
-	{
-		pid_t pid = fork();
-		if(pid == 0)
-		{
-			bool result = SetAffinity(index);
-			assert(result);
-			if(index == 5)
-			{
-				sleep(2);
-				abort();
-			}
+    for(int index = 1; index < coreCounter ;index++)
+    {
+        pid_t pid = fork();
+        if(pid == 0)
+        {
+            bool result = SetAffinity(index);
+            assert(result);
+            if(index == 5)
+            {
+                sleep(2);
+                abort();
+            }
 
-			boost::shared_ptr<DllInfo> dll = ManageDLL::getManageDLL()->getdlls()[(index-1)];
-			dll->loacl_inital(index);
-			while(true){}
-		}
-		else
-		{
-			printf("process id %d\n", pid);
-			boost::shared_ptr<Process> process(new Process(pid));
-			precesses.push_back(process);
-		}
-	}
-	return true;
+            boost::shared_ptr<DllInfo> dll = ManageDLL::getManageDLL()->getdlls()[(index-1)];
+            dll->loacl_inital(index);
+            while(true){
+
+            }
+        }
+        else
+        {
+            printf("process id %d\n", pid);
+            boost::shared_ptr<Process> process(new Process(pid));
+            precesses.push_back(process);
+        }
+    }
+    return true;
 }
 
 bool ProcessManage::SetAffinity(int core)
 {
-	cpu_set_t mask;
-	CPU_ZERO(&mask);
-	CPU_SET(core, &mask);
-	if (sched_setaffinity(0, sizeof(mask), &mask) < 0) {
-		perror("sched_setaffinity");
-	}
-	return true;
+    cpu_set_t mask;
+    CPU_ZERO(&mask);
+    CPU_SET(core, &mask);
+    if (sched_setaffinity(0, sizeof(mask), &mask) < 0) {
+        perror("sched_setaffinity");
+    }
+    return true;
 }
 #endif /* DPDK_FRAMEWORK_PROCESSMANAGE_HPP_ */
