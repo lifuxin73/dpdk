@@ -92,23 +92,23 @@ void ProcessManage::init_daemon()
 
 void ProcessManage::waitProcess()
 {
-	pid_t pid = wait(NULL);
-	std::vector<boost::shared_ptr<Process> >::iterator it = findPos(pid);
+    pid_t pid = wait(NULL);
+    std::vector<boost::shared_ptr<Process> >::iterator it = findPos(pid);
 
-	if(it == precesses.end())
-	{
-		printf("unknown process exit id : %d\n",pid);
-		perror("unknown precess exit.\n");
-	}
+    if(it == precesses.end())
+    {
+        printf("unknown process exit id : %d\n",pid);
+        perror("unknown precess exit.\n");
+    }
 
-	printf("process exit id : %d\n",(*it)->getPid());
-	precesses.erase(it);
+    printf("process exit id : %d\n",(*it)->getPid());
+    precesses.erase(it);
 
-	for(int index = 0; index < getPrecesses().size(); index++)
-	{
-		kill(getPrecesses()[index]->getPid(),SIGKILL);
-		printf("kill process id : %d\n",getPrecesses()[index]->getPid());
-	}
+    for(int index = 0; index < getPrecesses().size(); index++)
+    {
+        kill(getPrecesses()[index]->getPid(),SIGKILL);
+        printf("kill process id : %d\n",getPrecesses()[index]->getPid());
+    }
 }
 
 std::vector<boost::shared_ptr<Process> >::iterator ProcessManage::findPos(pid_t pid)

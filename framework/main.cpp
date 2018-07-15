@@ -15,12 +15,46 @@
 #include "ManageDLL.hpp"
 #include "ProcessManage.hpp"
 #include "ManageRtePool.hpp"
-
+#include "ThreadManage.hpp"
+#include "ProcessSync.hpp"
 #define NUM_MBUFS 8292
 #define MBUF_CACHE_SIZE 256
 
 int main(int argc, char **argv)
 {
+
+	printf("main : %d\n",argc);
+	printf("main : %s\n",argv[1]);
+
+
+
+    if( argc>=2 && !strcmp(argv[1], "stop"))
+    {
+    	SemName sem("sync_Sem");
+        if(!sem.CheckSem())
+        {
+            printf("There is not a process run!\n");
+            sem.CloseSem();
+            sem.UnlinkSem();
+            return 0;
+        }
+        else
+        {
+            printf("stop a process\n");
+            sem.CreateSem();
+            sem.PostSem();
+            sem.PostSem();
+            sem.WaitSem();
+            sem.CloseSem();
+            sleep(1);
+            sem.UnlinkSem();
+            printf("process have been stopped\n");
+            return 0;
+        }
+	}
+
+
+
     int ret;
 
     printf("PGID : %d\n",getpgrp());
@@ -61,9 +95,15 @@ int main(int argc, char **argv)
 
 
     sleep(3);
-    processManage.waitProcess();
+    //processManage.waitProcess();
 
+    SemName sem("sync_Sem");
+    sem.CreateSem();
 
-
+    printf("start a process run!\n");
+    sem.WaitSem();
+    sem.PostSem();
+    sem.CloseSem();
     return 0;
+
 }
